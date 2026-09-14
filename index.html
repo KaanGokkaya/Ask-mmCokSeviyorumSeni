@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sana Hediye Var!</title>
+<style>
+    /* Genel Ayarlar ve Seçilememe Özelliği */
+    body, html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background-color: #ffd1dc; /* Pastel pembe arka plan */
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        user-select: none; 
+        -webkit-user-select: none; 
+        overflow: hidden;
+    }
+
+    /* Arka Plandaki Çiçekleri Tutacak Konteyner */
+    #flower-container {
+        position: fixed;
+        top: 0; 
+        left: 0;
+        width: 100%; 
+        height: 100%;
+        pointer-events: none; 
+        z-index: 0;
+    }
+
+    /* Düzenli Çiçeklerin Sınıfı */
+    .flower {
+        position: absolute;
+        width: 180px; 
+        opacity: 0.4; 
+        transform: translate(-50%, -50%); 
+    }
+
+    /* Ana Ekran Konteyneri */
+    .main-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        text-align: center;
+        z-index: 1; 
+    }
+
+    /* Başlık Yazısı */
+    .title {
+        color: white;
+        font-size: 3.5rem;
+        font-weight: bold;
+        margin: 0;
+        text-shadow: 2px 2px 10px rgba(255, 105, 180, 0.4);
+    }
+
+    /* Ana Kedi Görseli */
+    .cat-image {
+        width: 350px;
+        max-width: 80vw;
+        filter: drop-shadow(0 15px 20px rgba(0,0,0,0.2));
+    }
+
+    /* Kabul Et Butonu */
+    .accept-btn {
+        background-color: white;
+        color: #ff69b4;
+        border: none;
+        padding: 18px 60px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        border-radius: 50px; 
+        cursor: pointer;
+        box-shadow: 0 8px 25px rgba(255, 105, 180, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .accept-btn:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 12px 30px rgba(255, 105, 180, 0.5);
+    }
+
+    .accept-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 4px 15px rgba(255, 105, 180, 0.3);
+    }
+
+    /* Arka Plan Blur Katmanı (Modal) */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(255, 209, 220, 0.6);
+        backdrop-filter: blur(15px); 
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.4s ease;
+        z-index: 100;
+    }
+
+    .modal-overlay.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    /* Çok Daha Büyük Kare Panel */
+    .modal-box {
+        background: white;
+        width: 550px; 
+        height: 550px; 
+        max-width: 90vw; 
+        max-height: 90vw;
+        border-radius: 60px; 
+        display: flex;
+        flex-direction: column;
+        justify-content: space-evenly;
+        align-items: center;
+        padding: 30px;
+        box-sizing: border-box;
+        box-shadow: 0 25px 60px rgba(255, 105, 180, 0.25);
+        transform: scale(0.7);
+        transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .modal-overlay.active .modal-box {
+        transform: scale(1);
+    }
+
+    /* Modal İçindeki Gif */
+    .modal-box img {
+        width: 100%;
+        height: 350px; 
+        object-fit: cover;
+        border-radius: 40px; 
+        background-color: #f8e5eb; 
+    }
+
+    /* Modal Altındaki Yazı */
+    .modal-text {
+        color: #ff69b4;
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 0;
+        text-align: center;
+    }
+
+</style>
+</head>
+<body>
+
+    <!-- Sürpriz Sesi (Gizli Oynatıcı) -->
+    <audio id="surprise-sound" src="surpriz.mp3" preload="auto"></audio>
+
+    <!-- Arka Plandaki Çiçeklerin Ekleneceği Kısım -->
+    <div id="flower-container"></div>
+
+    <!-- Ana Ekran -->
+    <div class="main-container">
+        <h1 class="title">Sana hediye var!!!</h1>
+        <img src="c078082c4423cda6216a7b4627c6eb52-removebg-preview.png" alt="Hediye Veren Kedi" class="cat-image">
+        <button class="accept-btn" id="btn-accept">Kabul et</button>
+    </div>
+
+    <!-- Hediye Kutusu (Modal) -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-box">
+            <img id="gift-gif" src="" alt="Öpücük">
+            <p class="modal-text">Hediyen kocaman bir öpücük</p>
+        </div>
+    </div>
+
+    <script>
+        const btnAccept = document.getElementById('btn-accept');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const flowerContainer = document.getElementById('flower-container');
+        const giftGif = document.getElementById('gift-gif');
+        const surpriseSound = document.getElementById('surprise-sound'); // Sesi seçiyoruz
+
+        // Çiçekleri şerit halinde ekleme
+        const rows = 4; 
+        const cols = 5; 
+        
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                let flower = document.createElement('img');
+                flower.src = 'cicek.png'; 
+                flower.className = 'flower';
+                
+                let offsetX = (r % 2 === 0) ? 0 : 10; 
+                let topPosition = (r * 30) + 5; 
+                let leftPosition = (c * 22) + 5 + offsetX; 
+                
+                flower.style.top = topPosition + '%';
+                flower.style.left = leftPosition + '%';
+                
+                flowerContainer.appendChild(flower);
+            }
+        }
+
+        // Butona basıldığında işlemleri başlat
+        btnAccept.addEventListener('click', () => {
+            modalOverlay.classList.add('active');
+            
+            // GIF'i baştan başlat
+            giftGif.src = 'opucuk.gif?t=' + new Date().getTime();
+            
+            // Sesi başa sar ve oynat
+            surpriseSound.currentTime = 0;
+            surpriseSound.play();
+        });
+
+        // Karenin dışına basıldığında modali kapat ve medyaları durdur
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+                
+                // Sesi hemen durdur
+                surpriseSound.pause();
+                surpriseSound.currentTime = 0;
+                
+                // Kapanma animasyonu süresi bitince GIF'in kaynağını sil
+                setTimeout(() => {
+                    giftGif.src = ''; 
+                }, 400);
+            }
+        });
+    </script>
+
+</body>
+</html>
